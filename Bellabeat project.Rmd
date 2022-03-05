@@ -1,0 +1,214 @@
+---
+title: "Bellabeat case study"
+author: "Amr Ghabbour"
+date: "12/3/2021"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+## First :
+#### Installing package 'tidyvers'  
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(tidyr)
+
+```
+
+## Second :
+
+### you could download same data from [here](https://www.kaggle.com/arashnic/fitbit).
+
+we import the data needed in our analysis for "Bellabeat" case study.
+
+```{r}
+setwd("C:/Users/DELL/Desktop/Fitabase")
+activity <- read.csv("dailyActivity_merged.csv")
+calories <- read.csv("dailyCalories_merged.csv")
+sleep <- read.csv("sleepDay_merged.csv")
+
+colnames(activity)
+colnames(calories)
+colnames(sleep)
+```
+## Third :
+#### Data Formating
+I did some formating to the dataframe as changing dates to unite them in different dataframes to one formate.
+
+```{r}
+
+# activity
+activity$ActivityDate=as.POSIXct(activity$ActivityDate, format="%m/%d/%Y", tz=Sys.timezone())
+activity$date <- format(activity$ActivityDate, format = "%m/%d/%y")
+# sleep
+sleep$SleepDay=as.POSIXct(sleep$SleepDay, format="%m/%d/%Y %I:%M:%S %p", tz=Sys.timezone())
+sleep$date <- format(sleep$SleepDay, format = "%m/%d/%y")
+
+```
+
+## Fourth :
+
+#### Merging dataframes
+I merge sleep and activity data frames to make some connections in order to find any patterns.
+
+```{r}
+merged_data <- merge(sleep, activity, by=c("Id","date"))
+
+
+
+merged_data_avg <- merged_data %>%
+  group_by(date) %>% 
+  summarise(mean(VeryActiveMinutes),mean(FairlyActiveMinutes),
+            mean(LightlyActiveMinutes),mean(Calories),mean(TotalSteps),mean(TotalDistance))
+view(merged_data_avg)
+```
+
+## Fifth :
+
+#### Analyzing steps 
+
+
+```{r}
+activity %>% 
+  select(TotalSteps,
+         TotalDistance,
+         VeryActiveDistance,
+         ModeratelyActiveDistance,
+         LightActiveDistance) %>% 
+  summary()
+
+```
+
+
+
+
+#### We can see from our data here that most distance spent in the day spent in light activities.
+
+#### As Average of Light activities distance is 3.34 from Average of total distance (5.49).
+
+
+
+
+```{r}
+activity %>% 
+  select(VeryActiveMinutes,
+         FairlyActiveMinutes,
+         LightlyActiveMinutes, SedentaryMinutes) %>% 
+  summary() 
+```
+
+
+
+ 
+#### We could see the a little time for Hard activities (VeryActivityTimes) in the day of the users of the application compared to light activities time and sedentary time. 
+
+
+
+
+
+```{r}
+p <- ggplot(data = merged_data) +
+  geom_point(aes(y= date , x= SedentaryMinutes, size= 3.5, color="#0000FF"))+
+  geom_point(aes(y= date , x= LightlyActiveMinutes, size = 4, color = "#00FF00" ))+
+  geom_point(aes(y= date , x= VeryActiveMinutes ,size = 5, color = "#FF0000" ))+
+  labs (title = "Different activity type distribution on the day",
+        subtitle = "Activity types : Hard Activities Time in (blue),
+                        Light Activities Time in (green),
+                        sedentary Time in (red)")
+p + xlab("Time In Minutes")
+```
+
+
+
+
+
+_________________________________________________________
+
+
+#### From our below graphs we could conclude that increasing Hard activities time could increase users calories burned per day.
+
+
+
+
+```{r}
+v <- ggplot(data = merged_data, aes(x= VeryActiveMinutes, y= Calories)) +
+   geom_smooth()+geom_point() +
+   labs(title = "Relationship Between very active time and calories")+
+   annotate("text", x=150,y=2000,label="More Highly Active, More calories burned", color = "red")
+v + xlab("Hard Activities Time")+ ylab("Calories burned")
+
+
+D <- ggplot(data = merged_data, aes(x= LightlyActiveMinutes, y= Calories)) +
+   geom_smooth()+geom_point()+
+   labs(title = "Relationship Between light active time and calories")+
+   annotate("text", x=400,y=500,label="No correlation between Calories burned and light activites ", color = "red")
+ D + xlab( "Light Activities Time")+ ylab("Calories burned")
+   
+  
+```
+
+
+
+
+```{r}
+
+k <- ggplot(data = merged_data , aes(x= TotalMinutesAsleep, y= SedentaryMinutes )) +
+   geom_smooth()+geom_point() +
+   labs(title="Relationship between Sedentary time and Sleep time")+
+   annotate("text", x=200,y=250,label="low sleep time, high sedentary time")
+k +xlab("Sleep time")+ ylab("Sedentary time")
+
+```
+
+#### here we could find a negative correlation between sleep time and sedentary time.
+
+#### The more users sleep, th Less sedentary time.
+
+
+
+# Weekends vs Workdays 
+
+
+
+
+
+```{r}
+weekends <- slice(merged_data_avg,5,6,13,14,20,21,27,28)
+workdays <- slice(merged_data_avg,1,2,3,4,7,8,9,10,11,12,15,16,17,18,19,23,24,25,26,29,30,31)
+view(workdays)
+view(weekends)
+weekends_mean <- weekends %>%  summarise(mean(`mean(LightlyActiveMinutes)`),
+                        mean(`mean(FairlyActiveMinutes)`),
+                        mean(`mean(VeryActiveMinutes)`),
+                        mean(`mean(Calories)`),
+                        mean(`mean(TotalSteps)`),
+                        mean(`mean(TotalDistance)`))
+
+workdays_mean <- workdays %>%  summarise(mean(`mean(LightlyActiveMinutes)`),
+                        mean(`mean(FairlyActiveMinutes)`),
+                        mean(`mean(VeryActiveMinutes)`),
+                        mean(`mean(Calories)`),
+                        mean(`mean(TotalSteps)`),
+                        mean(`mean(TotalDistance)`))
+head(weekends_mean)
+head(workdays_mean)
+```
+
+#### From here we could conclude that there aren't much difference between weekends and workdays. 
+
+#### Despite people could do more hard exercise to burn more calories in weekends.
+
+
+# Sixth : 
+#### Recommendations for users of Bellabeat :
+
+* Increase your daily hard activities, to improve your daily burned calories and change your life.
+
+* Increase your sleep time, to reduce sedentary time during the day. 
+
+* Try to invest in your weekend with much time hard activities to burn more calories.
+
